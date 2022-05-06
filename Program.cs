@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Data.Common;
 using System.Linq;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -29,11 +28,9 @@ namespace btchistorycs
 
     public class DataContext : DbContext
     {
-
         public DbSet<PriceEntry> PriceEntries { get; set; }
 
         public DataContext(DbContextOptions options) : base(options) { }
-
     }
 
     public record PriceEntry
@@ -41,7 +38,7 @@ namespace btchistorycs
         public int ID { get; init; }
         public DateTime Timestamp { get; init; }
 
-        public int MinuteOfDay {get;set;}
+        public int MinuteOfDay { get; set; }
 
         public String Coin { get; init; }
 
@@ -52,10 +49,74 @@ namespace btchistorycs
 
     class Program
     {
+        enum RunMode
+        {
+            Invalid,
+            RecordPrice,
+            PrintStats
+        }
+
+        static RunMode _mode = RunMode.Invalid;
+
         static async Task Main(string[] args)
         {
             Console.WriteLine($"-- START {DateTime.UtcNow}");
 
+            if (!args.Any())
+            {
+                _mode = RunMode.Invalid;
+            }
+            else if (args[0].ToLower() == "record")
+            {
+                _mode = RunMode.RecordPrice;
+            }
+            else if (args[0].ToLower() == "stats")
+            {
+                _mode = RunMode.PrintStats;
+            }
+            else
+            {
+                _mode = RunMode.Invalid;
+            }
+
+            if (_mode == RunMode.Invalid)
+            {
+                Console.WriteLine("Invalid args: Try 'record' or 'stats'");
+                return;
+            }
+
+            using var conn = new SqliteConnection("DataSource=history.db");
+            conn.Open();
+
+            var options = new DbContextOptionsBuilder<DataContext>()
+            .UseSqlite(conn)
+            .Options;
+
+            using var ctx = new DataContext(options);
+
+            if (_mode == RunMode.RecordPrice)
+            {
+                await RecordPrice(ctx);
+                Console.WriteLine("Record: OK");
+            }
+            else if (_mode == RunMode.PrintStats)
+            {
+                var daysStr = args.Length > 1 ? args[1] : null;
+                int days;
+
+                if (!Int32.TryParse(daysStr, out days))
+                {
+                    days = 10;
+                }
+
+                PrintStats(ctx, Math.Max(1, days));
+            }           
+
+            Console.WriteLine($"-- END {DateTime.UtcNow}");
+        }
+
+        static async Task RecordPrice(DataContext ctx)
+        {
             var currentPrice = await GetCurrentPrice();
 
             var entry = new PriceEntry
@@ -67,70 +128,37 @@ namespace btchistorycs
                 Price = currentPrice.CurrentMarketData.CurrentPrice.GBP
             };
 
-            var conn = new SqliteConnection("DataSource=history.db");
-            conn.Open(); 
-
-            var options = new DbContextOptionsBuilder<DataContext>()
-            .UseSqlite(conn)
-            .Options;
-
-            using var ctx = new DataContext(options);
-
             ctx.Database.EnsureCreated();
 
             ctx.Add(entry);
             ctx.SaveChanges();
+        }
 
+        static void PrintStats(DataContext ctx, int days)
+        {
             // All time
 
             var pricesPerMinuteAllTime = ctx.PriceEntries
                 .ToList()
                 .GroupBy(x => x.MinuteOfDay);
 
-            Console.WriteLine($"[All time] Best 10 mins to buy bitcoin (UTC):");
+            Console.WriteLine($"[Last {days} days] Best 60 mins to buy bitcoin (UTC):");
 
             foreach (var price in pricesPerMinuteAllTime
                 .OrderBy(x => x.Average(y => y.Price))
-                .Take(10))
+                .Take(60))
             {
                 Console.WriteLine($"{MinuteOfDayToString(price.Key)} = Avg. {price.Average(x => x.Price)} (price {price.Min(x => x.Price)} - Max {price.Max(x => x.Price)})");
             }
 
-            Console.WriteLine($"[All time] Worst 10 mins to buy bitcoin (UTC):");
+            Console.WriteLine($"[Last {days} days] Worst 60 mins to buy bitcoin (UTC):");
 
             foreach (var price in pricesPerMinuteAllTime
                 .OrderByDescending(x => x.Average(y => y.Price))
-                .Take(10))
+                .Take(60))
             {
                 Console.WriteLine($"{MinuteOfDayToString(price.Key)} = Avg. {price.Average(x => x.Price)} (price {price.Min(x => x.Price)} - Max {price.Max(x => x.Price)})");
             }
-
-            // Last Month
-
-            var pricesPerMinutelastMonth = ctx.PriceEntries
-                .Where(x => x.Timestamp > DateTime.UtcNow.AddMonths(-1))
-                .ToList()
-                .GroupBy(x => x.MinuteOfDay);
-
-            Console.WriteLine($"[Last Month] Worst 10 mins to buy bitcoin (UTC):");
-
-            foreach (var price in pricesPerMinutelastMonth
-                .OrderByDescending(x => x.Average(y => y.Price))
-                .Take(10))
-            {
-                Console.WriteLine($"{MinuteOfDayToString(price.Key)} = Avg. {price.Average(x => x.Price)} (price {price.Min(x => x.Price)} - Max {price.Max(x => x.Price)})");
-            }
-
-            Console.WriteLine($"[Last Month] Worst 10 mins to buy bitcoin (UTC):");
-
-            foreach (var price in pricesPerMinutelastMonth
-                .OrderBy(x => x.Average(y => y.Price))
-                .Take(10))
-            {
-                Console.WriteLine($"{MinuteOfDayToString(price.Key)} = Avg. {price.Average(x => x.Price)} (price {price.Min(x => x.Price)} - Max {price.Max(x => x.Price)})");
-            }            
-
-            Console.WriteLine($"-- END {DateTime.UtcNow}");
         }
 
         static string MinuteOfDayToString(int minuteOfDay)
@@ -154,7 +182,7 @@ namespace btchistorycs
                 .AddQueryParameter("sparkline", "false");
 
             var response = await client.GetAsync(request);
-             
+
             return JsonConvert.DeserializeObject<ApiResponse>(response.Content);
         }
     }
