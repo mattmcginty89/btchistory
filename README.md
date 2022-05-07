@@ -1,15 +1,21 @@
 # btchistory
-Record minute by minute Bitcoin price history in GBP
+Record Bitcoin price history and anaylse average prices per day/hour/minute
+
+This provides an almost certainly useless data set to aid with the timing of DCA orders
+
+Collecting this data helps fool yourself into answering questions like:
+  - When DCA'ing every day - Is 5pm better than 4am?
+  - When DCA'ing every week - Is Monday better than Thursday?
+
+In reality, this is clearly utterly useless data, as the market is ever changing and unpredicatable
+
+This was written purely as a hobby project to learn F#
 
 Prices are obtained from the CoinGecko API
 
 Price history is held persistently in an SqLite database file on disk
 
 All dates/times are in UTC
-
-This provides (almost definitely not) useful data, to aid with timing DCA strategies
-
-This was written purely as a hobby project to learn F#
 
 **Usage:**
 
@@ -39,13 +45,18 @@ $ dotnet run stats
 Running stats for the previous 10 days
 
 Best hours to buy on a Saturday:
-11-12 -> Avg. 29240 (Min. 29240 - Max 29240)
+12-13 -> Avg. 29233.4 (Min. 29223 - Max 29238)
+... [Other hours/days]
 
 Best hours of the day to buy across full week
-11-12 = Avg. 29240 (Min. 29240 - Max. 29240)
+12-13 = Avg. 29233.4 (Min. 29223 - Max. 29238)
+... [Other hours]
 
 Best minutes of the day to buy across full week
-11:55 = Avg. 29240 (Min. 29240 - Max. 29240)
+12:25 = Avg. 29223 (Min. 29223 - Max. 29223)
+12:15 = Avg. 29232 (Min. 29232 - Max. 29232)
+... [Other minutes]
+
 ```
 
 **Todo**
