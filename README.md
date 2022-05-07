@@ -5,6 +5,8 @@ Prices are obtained from the CoinGecko API
 
 Price history is held persistently in an SqLite database file on disk
 
+All dates/times are in UTC
+
 This provides (almost definitely not) useful data, to aid with timing DCA strategies
 
 This was written purely as a hobby project to learn F#
