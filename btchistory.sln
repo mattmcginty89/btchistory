@@ -1,6 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "btchistoryfs", "btchistoryfs\btchistoryfs.fsproj", "{47853B1C-9C11-4989-A9EE-A9CB6479EDA1}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "btchistory", "btchistory\btchistory.fsproj", "{47853B1C-9C11-4989-A9EE-A9CB6479EDA1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

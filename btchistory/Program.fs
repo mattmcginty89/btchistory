@@ -82,12 +82,12 @@ let printBestHoursPerDayStats (stats: IGrouping<DayOfWeek,PriceEntry>) =
 let getPerHourStatLines (prices: PriceEntry list) =
     prices.GroupBy(fun x -> x.Timestamp.Hour).ToList()
         .OrderBy(fun x -> x.Average(fun y -> y.Price))
-        .Select(fun x -> $"{x.Key}-{getNextHour x.Key} = Avg. {x.Average(fun y -> y.Price)} (x {x.Min(fun y -> y.Price)} - Max {x.Max(fun y -> y.Price)})")
+        .Select(fun x -> $"{x.Key}-{getNextHour x.Key} = Avg. {x.Average(fun y -> y.Price)} (Min. {x.Min(fun y -> y.Price)} - Max. {x.Max(fun y -> y.Price)})")
         
 let getPerMinStatLines (prices: PriceEntry list) =
     prices.GroupBy(fun x -> (x.Timestamp.Hour * 60) + x.Timestamp.Minute).ToList()
         .OrderBy(fun x -> x.Average(fun y -> y.Price))
-        .Select(fun x -> $"{formatMinuteOfDay x.Key} = Avg. {x.Average(fun y -> y.Price)} (x {x.Min(fun y -> y.Price)} - Max {x.Max(fun y -> y.Price)})")
+        .Select(fun x -> $"{formatMinuteOfDay x.Key} = Avg. {x.Average(fun y -> y.Price)} (Min. {x.Min(fun y -> y.Price)} - Max. {x.Max(fun y -> y.Price)})")
         
 let printStats ctx (days: int) =
     printfn $"Running stats for the previous {days} days"
