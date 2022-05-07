@@ -38,6 +38,8 @@ namespace btchistorycs
         public int ID { get; init; }
         public DateTime Timestamp { get; init; }
 
+        public int HourOfDay { get; set; }
+
         public int MinuteOfDay { get; set; }
 
         public String Coin { get; init; }
@@ -123,6 +125,7 @@ namespace btchistorycs
             {
                 Timestamp = DateTime.UtcNow,
                 MinuteOfDay = (DateTime.UtcNow.Hour * 60) + DateTime.UtcNow.Minute,
+                HourOfDay = DateTime.UtcNow.Hour,
                 Coin = "BTC",
                 Currency = "GBP",
                 Price = currentPrice.CurrentMarketData.CurrentPrice.GBP
@@ -137,27 +140,48 @@ namespace btchistorycs
         static void PrintStats(DataContext ctx, int days)
         {
             // All time
+            var pricesPerHour = ctx.PriceEntries
+                .ToList()
+                .GroupBy(x => x.HourOfDay);
 
-            var pricesPerMinuteAllTime = ctx.PriceEntries
+            Console.WriteLine($"[Last {days} days] Best 6 hours to buy bitcoin (UTC):");
+
+            foreach (var price in pricesPerHour
+                .OrderBy(x => x.Average(y => y.Price))
+                .Take(6))
+            {
+                Console.WriteLine($"{price.Key} = Avg. {price.Average(x => x.Price)} (price {price.Min(x => x.Price)} - Max {price.Max(x => x.Price)})");
+            }
+
+            Console.WriteLine($"[Last {days} days] Worst 6 hours to buy bitcoin (UTC):");
+
+            foreach (var price in pricesPerHour
+                .OrderByDescending(x => x.Average(y => y.Price))
+                .Take(6))
+            {
+                Console.WriteLine($"{price.Key} = Avg. {price.Average(x => x.Price)} (price {price.Min(x => x.Price)} - Max {price.Max(x => x.Price)})");
+            }
+
+            var pricesPerMinute = ctx.PriceEntries
                 .ToList()
                 .GroupBy(x => x.MinuteOfDay);
 
             Console.WriteLine($"[Last {days} days] Best 60 mins to buy bitcoin (UTC):");
 
-            foreach (var price in pricesPerMinuteAllTime
+            foreach (var price in pricesPerMinute
                 .OrderBy(x => x.Average(y => y.Price))
                 .Take(60))
             {
-                Console.WriteLine($"{MinuteOfDayToString(price.Key)} = Avg. {price.Average(x => x.Price)} (price {price.Min(x => x.Price)} - Max {price.Max(x => x.Price)})");
+                Console.WriteLine($"{price.Key} = Avg. {price.Average(x => x.Price)} (price {price.Min(x => x.Price)} - Max {price.Max(x => x.Price)})");
             }
 
             Console.WriteLine($"[Last {days} days] Worst 60 mins to buy bitcoin (UTC):");
 
-            foreach (var price in pricesPerMinuteAllTime
+            foreach (var price in pricesPerMinute
                 .OrderByDescending(x => x.Average(y => y.Price))
                 .Take(60))
             {
-                Console.WriteLine($"{MinuteOfDayToString(price.Key)} = Avg. {price.Average(x => x.Price)} (price {price.Min(x => x.Price)} - Max {price.Max(x => x.Price)})");
+                Console.WriteLine($"{price.Key} = Avg. {price.Average(x => x.Price)} (price {price.Min(x => x.Price)} - Max {price.Max(x => x.Price)})");
             }
         }
 
