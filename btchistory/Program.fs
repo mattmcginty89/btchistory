@@ -1,4 +1,5 @@
-﻿open EntityFrameworkCore.FSharp.DbContextHelpers
+﻿open System.Collections.Generic
+open EntityFrameworkCore.FSharp.DbContextHelpers
 open FSharp.Data
 open Microsoft.Data.Sqlite
 open Microsoft.EntityFrameworkCore
@@ -89,8 +90,8 @@ let getPerMinStatLines (prices: PriceEntry list) =
         .OrderBy(fun x -> x.Average(fun y -> y.Price))
         .Select(fun x -> $"{formatMinuteOfDay x.Key} = Avg. {x.Average(fun y -> y.Price)} (Min. {x.Min(fun y -> y.Price)} - Max. {x.Max(fun y -> y.Price)})")
         
-let printStats ctx (days: int) =
-    printfn $"Running stats for the previous {days} days"
+let printStatsGbp ctx (days: int) =
+    printfn $"Running GBP stats for the previous {days} days"
     
     let prices = getPrices ctx days
     
@@ -104,7 +105,34 @@ let printStats ctx (days: int) =
     // Print best general hour to buy across full week
     printfn $"{cr}Best minutes of the day to buy across full week"
     (getPerMinStatLines prices).ToList().ForEach(fun x -> printfn $"{x}")
+
+let printStatsPercent ctx (days: int) =
+    printfn $"Running stats for the previous {days} days..."
+    printfn "Resulting %% stats are the difference between hourly average price and daily average price"
+    printfn "A negative %% indicates lower than daily average (A good time to buy):\n"
+    
+    let prices = getPrices ctx days
+    let hourlyAvgDict = List<KeyValuePair<int, double>>()
+
+    // Loop through each day & get average price for entire day
+    // Then rank each hour as +-% of the daily average and record in a dict
+    for day in prices.GroupBy(fun x -> x.Timestamp.Date) do
+        let dayAvg = day.Average(fun x -> x.Price)
         
+        for hour in day.GroupBy(fun x -> x.Timestamp.Hour) do
+            let hourAvg = hour.Average(fun x -> x.Price)
+            
+            // Work out this hours % performance vs the daily avg price and record it
+            let hourDiff = hourAvg - dayAvg            
+            let hourPerc = 100.0 / (dayAvg / hourDiff)
+            hourlyAvgDict.Add(KeyValuePair<int, double>(hour.Key, hourPerc))
+        
+    // Dict now looks like this [hour, avgPriceDiff%]: [1, 0.123], [1, -0.432], [1, 0.111], ... , [2, 0.432], [2, -0.234] ... etc
+    // Group by the hour & order by average price for that hour (Lower = lower avg % diff vs daily average)
+    hourlyAvgDict.GroupBy(fun x -> x.Key)
+       .OrderBy(fun x -> x.Average(fun y -> y.Value))
+       .Select(fun x -> $"Hour {x.Key}-{getNextHour x.Key}\t->\t{x.Sum(fun y -> y.Value / Convert.ToDouble(x.Select(fun y -> y.Value).Count())):N2}%%")
+       .ToList().ForEach(fun x -> printfn $"{x}")
     
 let parseArgAsInt (arg: string) fallback : int =
     let mutable res = fallback
@@ -118,7 +146,9 @@ let parseArgAsInt (arg: string) fallback : int =
 let main args =
     match args with
     | x when x.Length = 1 && x[0] = "record" -> printfn $"%s{recordPrice initCtx}"
-    | x when x.Length = 1 && x[0] = "stats" -> printStats initCtx 10
-    | x when x.Length = 2 && x[0] = "stats" -> parseArgAsInt x[1] 10 |> printStats initCtx
+    | x when x.Length = 1 && x[0] = "stats£" -> printStatsGbp initCtx 10
+    | x when x.Length = 2 && x[0] = "stats£" -> parseArgAsInt x[1] 10 |> printStatsGbp initCtx
+    | x when x.Length = 1 && x[0] = "stats%" -> printStatsPercent initCtx 10
+    | x when x.Length = 2 && x[0] = "stats%" -> parseArgAsInt x[1] 10 |> printStatsPercent initCtx
     | _ -> printfn "%s" "Invalid args provided: Valid args are 'record', 'stats', 'stats N'"
     0
