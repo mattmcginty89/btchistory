@@ -1,15 +1,17 @@
 # btchistory
-Record Bitcoin price history and anaylse average prices per day/hour/minute
+Record Bitcoin price history in GBP and anaylse average prices per day/hour/minute
 
-This provides an almost certainly useless data set to aid with the timing of DCA orders
+This provides a dataset to aid with the timing of DCA orders
 
 Collecting this data helps fool yourself into answering questions like:
   - When DCA'ing every day - Is 5pm better than 4am?
   - When DCA'ing every week - Is Monday better than Thursday?
 
-In reality, this is clearly utterly useless data, as the market is ever changing and unpredicatable
+In reality, this is useless data! The market is ever changing and unpredicatable
 
-This was written purely as a hobby project to learn F#
+This was written purely as a hobby project to expose the author to the F# language <3
+
+You should not consider anything this program produces as financial advice!
 
 Prices are obtained from the CoinGecko API
 
